@@ -32,21 +32,26 @@ React/Javascript based web application to login into spotify and retrieve playli
 Spotify Web API
 
 # What is Implemented?
+- Github Setup
 - Python POC
 - React App Setup/Basic Structure
-- Github Setup
-- Authentication & Token Setup (Implicit grant -- not recommended)
+- Navigation Bar for Dashboard and Table Page
+- Context Provider Architecture for only one API call
+- Authorization with PCKE code/Access Token Retrieval
 - Basic Playlist Data Retrieval
 - Basic Playlist Song Data Retrieval
 - Basic Statistics Calculation Functions: 
--   Number of songs, % of 2 years old, % of 6 months young
-- Navigation Bar for Dashboard and Table Page
-- Context Provider Architecture for only one API call
-- Authentication & Token Setup (Authorization with PKCE)
+-> Number of songs
+-> % of 2 years old, % of 6 months young
+-> last song added date, average song added date, average song release date
+-> most frequent artist count by number, by percentage
+- Basic Dashboard Component Strucutre with Basic UI
+- Dashboard buttons
+-> Expand/Collapse
+-> Reverse
 
-# What is Coming Soon? (Next 4 Weeks)
-- Dashboard Components Structure
--> POC w/ Basic UI
+# What is Coming Soon?
+- Dashboard Component St
 -> Customizable
 -> Graphics (Bars, Pie Charts)
 -> Advanced Design
@@ -55,9 +60,7 @@ Spotify Web API
 -> Customizable
 -> Advanced Design
 - More Statistics
--> Time from last added a song
 -> Time from last added the last 10 songs
--> Most common artist
 -> Artist distribution
 - Hosting
 -> Security
