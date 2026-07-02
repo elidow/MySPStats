@@ -15,6 +15,18 @@ const LOCAL_STORAGE_KEYS = {
     CODE_VERIFIER: "spotify_code_verifier",
 };
 
+const clearStoredSpotifyAuth = (setAccessTokenFn = null) => {
+    Object.values(LOCAL_STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
+    if (typeof setAccessTokenFn === "function") {
+        setAccessTokenFn(null);
+    }
+};
+
+const isInvalidGrantError = (err) => {
+    const error = err?.response?.data?.error || err?.response?.data?.error_description || err?.message || "";
+    return typeof error === "string" && /invalid_grant/i.test(error);
+};
+
 /*
  * generateCodeVerifier
  * Given an integer (length), returns a string that represents a generated code verifier of given length
@@ -98,7 +110,8 @@ const useSpotifyWebApi = () => {
         const codeVerifier = localStorage.getItem(LOCAL_STORAGE_KEYS.CODE_VERIFIER);
         if (!codeVerifier) {
             console.warn("No code verifier found in localStorage");
-            return;
+            clearStoredSpotifyAuth(() => setAccessToken(null));
+            return initiateUserAuthorization();
         }
 
         try {
@@ -124,6 +137,11 @@ const useSpotifyWebApi = () => {
             // Redirect to app
             window.history.replaceState({}, document.title, "/playlists");
         } catch (err) {
+            if (isInvalidGrantError(err)) {
+                console.warn("Invalid grant error during token exchange; clearing stored auth and reauthorizing.");
+                clearStoredSpotifyAuth(() => setAccessToken(null));
+                return initiateUserAuthorization();
+            }
             console.error("Failed to request user authentication:", err.response ? err.response.data : err.message);
         }
     }, []);
@@ -137,6 +155,7 @@ const useSpotifyWebApi = () => {
         const refreshToken = localStorage.getItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN);
         if (!refreshToken) {
             console.warn("No refresh token found in local storage");
+            clearStoredSpotifyAuth(() => setAccessToken(null));
             return initiateUserAuthorization();
         }
 
@@ -155,7 +174,8 @@ const useSpotifyWebApi = () => {
             localStorage.setItem(LOCAL_STORAGE_KEYS.TOKEN_TIMESTAMP, Date.now().toString());
         } catch (err) {
             console.warn("Failed to refresh token, logging in again...", err);
-            initiateUserAuthorization();
+            clearStoredSpotifyAuth(() => setAccessToken(null));
+            return initiateUserAuthorization();
         }
     }, []);
 
