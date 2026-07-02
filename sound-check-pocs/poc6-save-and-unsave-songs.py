@@ -8,7 +8,7 @@ import os
 import time
 from dotenv import load_dotenv
 from spotify_web_api import SpotifyWebApi
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 load_dotenv()
 
@@ -16,24 +16,24 @@ load_dotenv()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # File paths (relative to script location)
-ADD_UNSAVED_TOP_MULTIPLE_PATH = os.path.join(SCRIPT_DIR, "personal_data/intersections/add-unsavedSongsInTopSongsAndInMultiplePlaylists.txt")
-REMOVE_SAVED_SONGS_PATH = os.path.join(SCRIPT_DIR, "personal_data/intersections/remove-savedSongsNotInTopSongsOrPlaylists.txt")
+ADD_UNSAVED_TOP_MULTIPLE_PATH = os.path.join(SCRIPT_DIR, "personal_data/intersections/1-ADD-unsavedSongsInTopSongsAndInMultiplePlaylists.txt")
+REMOVE_SAVED_SONGS_PATH = os.path.join(SCRIPT_DIR, "personal_data/intersections/2-REMOVE-savedSongsNotInTopSongsOrPlaylists.txt")
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, "personal_data/savedAndUnsavedSongs.txt")
 
 # Scope for Spotify API
 SCOPE = "user-library-read user-library-modify"
 
-def parse_song_line(line):
+def parse_song_line(file, line):
     """
     Parse a line from the song files.
     Format: count: Song | Artist | ID | Playlists: ... (for playlistSongsNotInSavedSongs)
-    Format: Song | Artist | ID (for remove-savedSongsNotInTopSongsOrPlaylists)
-    Returns (song_name, artist, track_id) or None if parsing fails
+    Format: Song | Artist | Album? | Date Saved | ID (for 2-REMOVE-savedSongsNotInTopSongsOrPlaylists)
+    Returns (song_name, artist, track_id, date_saved_or_count) or None if parsing fails
     """
     parts = line.strip().split(" | ")
     
     # For playlistSongsNotInSavedSongs.txt format: "count: Song | Artist | ID | Playlists: ..."
-    if len(parts) >= 3 and ":" in parts[0]:
+    if file == "add":
         try:
             # Extract the count from the first part
             count_part = parts[0].split(":")[0]
@@ -45,13 +45,17 @@ def parse_song_line(line):
         except (ValueError, IndexError):
             return None
     
-    # For remove-savedSongsNotInTopSongsOrPlaylists.txt format: "Song | Artist | ID"
-    elif len(parts) == 3:
+    # For 2-REMOVE-savedSongsNotInTopSongsOrPlaylists.txt format:
+    # "Song | Artist | Album? | Date Saved | ID"
+    elif file == "remove":
+        if len(parts) < 4:
+            return None
         try:
             song = parts[0]
             artist = parts[1]
-            track_id = parts[2]
-            return (song, artist, track_id)
+            track_id = parts[-1]
+            date_saved = parts[-2]
+            return (song, artist, track_id, date_saved)
         except IndexError:
             return None
     
@@ -60,7 +64,7 @@ def parse_song_line(line):
 
 def read_add_unsaved_top_multiple():
     """
-    Read add-unsavedSongsInTopSongsAndInMultiplePlaylists.txt and return a dict of track_id -> (song, artist, count)
+    Read 1-ADD-unsavedSongsInTopSongsAndInMultiplePlaylists.txt and return a dict of track_id -> (song, artist, count)
     """
     songs_to_save = {}
     if not os.path.exists(ADD_UNSAVED_TOP_MULTIPLE_PATH):
@@ -68,7 +72,7 @@ def read_add_unsaved_top_multiple():
         return songs_to_save
     with open(ADD_UNSAVED_TOP_MULTIPLE_PATH, 'r') as f:
         for line in f:
-            parsed = parse_song_line(line)
+            parsed = parse_song_line("add", line)
             if parsed and len(parsed) == 4:
                 song, artist, track_id, count = parsed
                 songs_to_save[track_id] = (song, artist, count)
@@ -76,9 +80,10 @@ def read_add_unsaved_top_multiple():
 
 def read_remove_saved_songs():
     """
-    Read remove-savedSongsNotInTopSongsOrPlaylists.txt and return a dict of track_id -> (song, artist)
+    Read 2-REMOVE-savedSongsNotInTopSongsOrPlaylists.txt and return a dict of track_id -> (song, artist)
     """
     songs_to_unsave = {}
+    thirty_days_ago = str(date.today() - timedelta(days=30))
     
     if not os.path.exists(REMOVE_SAVED_SONGS_PATH):
         print(f"Warning: {REMOVE_SAVED_SONGS_PATH} not found")
@@ -86,10 +91,13 @@ def read_remove_saved_songs():
     
     with open(REMOVE_SAVED_SONGS_PATH, 'r') as f:
         for line in f:
-            parsed = parse_song_line(line)
-            if parsed and len(parsed) == 3:
-                song, artist, track_id = parsed
-                songs_to_unsave[track_id] = (song, artist)
+            parsed = parse_song_line("remove", line)
+            if parsed and len(parsed) == 4:
+                song, artist, track_id, date_saved = parsed
+                if date_saved < thirty_days_ago:
+                    songs_to_unsave[track_id] = (song, artist)
+            elif line.strip():
+                print(f"Skipping malformed remove line: {line.strip()}")
     
     return songs_to_unsave
 
@@ -98,13 +106,7 @@ def main():
     
     # Initialize Spotify API
     api = SpotifyWebApi(scope=SCOPE)
-    code_verifier = api.generate_code_verifier()
-    code_challenge = api.generate_code_challenge(code_verifier)
-    authorization_url = api.get_authorization_url(code_challenge)
-    
-    print("Go to this URL and authorize the app:\n", authorization_url)
-    authorization_code = input("Enter the code from the redirect URL: ").strip()
-    api.get_token_pkce(authorization_code, code_verifier)
+    api.authorize_with_pkce()
     
     # Read songs from files
     print("Reading song data...")
