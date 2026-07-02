@@ -1,3 +1,7 @@
+# How To Run
+cd sound-check
+npm start
+
 # SoundCheck
 SoundCheck is a solution to provide advanced insights on your Spotify playlists for streamlined maintenacnce. The web app makes requests to the Spotify Web API to retrieve relevant playlist and user data. From there it retrieves or calculates statistics in a variety of categories and scores those statistics if applicable. This information is shown through a few features: playlist overview, playlist specifics, customizable dashboards, and tables.
 
@@ -27,8 +31,11 @@ SoundCheck is a solution to provide advanced insights on your Spotify playlists 
 - Nice to have: Get song data about music and use data science/ML to find recommened songs. Spotify already does this, but I think Spotify AI could be better based on preferences.
 
 # Plans to expand?
-I am pretty aware of its strengths and weaknesses. People who love putting in the work to make their playlist or love advanced stats would love this. Others, not so much. Could expand this to everyone,
-so you never know.
+I am pretty aware of its strengths and weaknesses. People who love putting in the work to make their playlist or love advanced stats would love this. Others, not so much. 
+
+There is also a big runtime problem due to spotify rate limiting. I am considering breaking this up into a frontend and backend, as well as a database for saved and top songs on an hourly basis.
+
+Could expand this to everyone, so you never know.
 
 # POCs
 sound-check-pocs contains Python code that either provides a POC for SoundCheck using the SpotifyWebApi or is used to general information or insightful data to me.
@@ -91,4 +98,11 @@ Spotify Web API
 - New POC files for advanced stats for playlists, saved data, intersections
 
 2025 Q2
-- ?
+- Loading Gear/Messages on initial load
+- Rework Cached Memory
+- User Friendly Translations for Stats
+- Special character in description bug fix
+- Breakpoint CSS issues
+- New POC for favorite song/album/artist generation based on stats
+- Handles Invalid Grant Errors and Discards Tokens
+- POC Handles getting token from browser automatically
